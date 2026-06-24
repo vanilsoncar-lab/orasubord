@@ -130,21 +130,23 @@ function TelaLogin(){
     if(!email){setErro("Digite seu email.");return;}
     if(senha.length<6){setErro("A senha precisa ter pelo menos 6 caracteres.");return;}
     setErro("");setLoading(true);
-    const {data,error} = await sb.auth.signUp({
-      email, password:senha,
-      options:{data:{nome:nome.trim(),sobrenome:sobrenome.trim()}}
-    });
-    if(error){
-      console.error("Supabase signUp error:", JSON.stringify(error));
-      setErro("Erro: "+(error.message||error.msg||error.error_description||JSON.stringify(error)));
-      setLoading(false);return;
+    try {
+      const {data,error} = await sb.auth.signUp({
+        email:email.trim(), password:senha,
+        options:{data:{nome:nome.trim(),sobrenome:sobrenome.trim()}}
+      });
+      if(error) throw error;
+      if(!data||!data.user) throw new Error("Cadastro não retornou usuário.");
+      await sb.from("perfis").update({
+        nome:nome.trim(), sobrenome:sobrenome.trim(), turma
+      }).eq("id",data.user.id);
+      setLoading(false);
+      setOk("Conta criada! Faça login para continuar.");
+      setModo("login");
+    } catch(e) {
+      setErro("Erro: "+(e.message||e.msg||JSON.stringify(e)));
+      setLoading(false);
     }
-    if(data.user){
-      const {error:perfilError} = await sb.from("perfis").update({nome:nome.trim(),sobrenome:sobrenome.trim(),turma}).eq("id",data.user.id);
-      if(perfilError) console.error("Perfil error:", JSON.stringify(perfilError));
-    }
-    setLoading(false);
-    setOk("Conta criada! Entrando…");
   }
 
   return (
@@ -199,7 +201,7 @@ function TelaLogin(){
             : <>Já tem conta? <span onClick={()=>{setModo("login");setErro("");}} style={{color:"#4A90D9",cursor:"pointer",fontWeight:600}}>Entrar</span></>
           }
         </p>
-        <p style={{fontSize:11,color:"#CCC",textAlign:"center",marginTop:16}}>v1.5</p>
+        <p style={{fontSize:11,color:"#CCC",textAlign:"center",marginTop:16}}>v1.6</p>
       </div>
     </div>
   );
