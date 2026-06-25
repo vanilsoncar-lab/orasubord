@@ -124,8 +124,19 @@ function TelaLogin(){
   async function entrar(){
     if(!email||!senha){setErro("Preencha email e senha.");return;}
     setErro("");setLoading(true);
-    const {error} = await sb.auth.signInWithPassword({email,password:senha});
-    if(error) setErro("Email ou senha incorretos.");
+    try {
+      const res = await fetch(SUPA_URL+"/auth/v1/token?grant_type=password", {
+        method:"POST",
+        headers:{"Content-Type":"application/json","apikey":SUPA_KEY},
+        body:JSON.stringify({email:email.trim(),password:senha})
+      });
+      const data = await res.json();
+      if(data.error||data.error_description||!data.access_token){
+        setErro("Email ou senha incorretos.");
+      } else {
+        await sb.auth.setSession({access_token:data.access_token,refresh_token:data.refresh_token});
+      }
+    } catch(e){ setErro("Erro de conexão: "+e.message); }
     setLoading(false);
   }
 
@@ -137,22 +148,31 @@ function TelaLogin(){
     if(senha.length<6){setErro("A senha precisa ter pelo menos 6 caracteres.");return;}
     setErro("");setLoading(true);
     try {
-      const {data,error} = await sb.auth.signUp({
-        email:email.trim(), password:senha,
-        options:{data:{nome:nome.trim(),sobrenome:sobrenome.trim()}}
+      const res = await fetch(SUPA_URL+"/auth/v1/signup", {
+        method:"POST",
+        headers:{"Content-Type":"application/json","apikey":SUPA_KEY},
+        body:JSON.stringify({
+          email:email.trim(), password:senha,
+          data:{nome:nome.trim(), sobrenome:sobrenome.trim()}
+        })
       });
-      if(error) throw error;
-      if(!data||!data.user) throw new Error("Cadastro não retornou usuário.");
-      await sb.from("perfis").update({
-        nome:nome.trim(), sobrenome:sobrenome.trim(), turma
-      }).eq("id",data.user.id);
+      const data = await res.json();
+      if(data.error||data.error_description){
+        setErro("Erro: "+(data.error_description||data.error||data.msg||JSON.stringify(data)));
+        setLoading(false); return;
+      }
+      if(data.id){
+        await fetch(SUPA_URL+"/rest/v1/perfis?auth_id=eq."+data.id, {
+          method:"PATCH",
+          headers:{"Content-Type":"application/json","apikey":SUPA_KEY,"Authorization":"Bearer "+(data.access_token||SUPA_KEY)},
+          body:JSON.stringify({nome:nome.trim(),sobrenome:sobrenome.trim(),turma})
+        });
+      }
       setLoading(false);
       setOk("Conta criada! Faça login para continuar.");
       setModo("login");
-    } catch(e) {
-      setErro("Erro: "+(e.message||e.msg||JSON.stringify(e)));
-      setLoading(false);
-    }
+    } catch(e){ setErro("Erro de conexão: "+e.message); setLoading(false); }
+  }
   }
 
   return (
@@ -207,7 +227,7 @@ function TelaLogin(){
             : <>Já tem conta? <span onClick={()=>{setModo("login");setErro("");}} style={{color:"#4A90D9",cursor:"pointer",fontWeight:600}}>Entrar</span></>
           }
         </p>
-        <p style={{fontSize:11,color:"#CCC",textAlign:"center",marginTop:16}}>v1.7</p>
+        <p style={{fontSize:11,color:"#CCC",textAlign:"center",marginTop:16}}>v1.8</p>
       </div>
     </div>
   );
