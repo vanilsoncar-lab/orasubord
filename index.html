@@ -388,7 +388,10 @@ table.mapa .tipo{font-weight:800;color:var(--azul);}
      MENU SUPERIOR (visível após login)
 ═══════════════════════════════════════════════════════ -->
 <div class="menu-bar" id="menu-bar" style="display:none;">
-  <div class="menu-bar-titulo">📝 Orações Subordinadas</div>
+  <div style="display:flex;flex-direction:column;gap:1px;">
+    <div class="menu-bar-titulo">📝 Orações Subordinadas</div>
+    <div id="menu-bar-user" style="font-size:.62rem;color:rgba(255,255,255,.5);"></div>
+  </div>
   <div class="menu-btn-wrap">
     <button class="mbtn" onclick="abrirModal('modal-manual')" title="Manual">📖 Manual</button>
     <button class="mbtn" onclick="abrirModal('modal-sobre')" title="Sobre">ℹ️ Sobre</button>
@@ -630,10 +633,7 @@ table.mapa .tipo{font-weight:800;color:var(--azul);}
 ═══════════════════════════════════════════════════════ -->
 <div id="tela-conteudo" class="tela">
   <div class="topbar">
-    <div>
-      <div class="topbar-titulo">📝 Orações Subordinadas</div>
-      <div class="topbar-user" id="topbar-user"></div>
-    </div>
+    <div class="topbar-user" id="topbar-user" style="font-size:.72rem;color:rgba(255,255,255,.7);"></div>
     <div class="topbar-nav">
       <button class="tnav on" onclick="irPara('conteudo')">Conteúdo</button>
       <button class="tnav" onclick="irPara('exercicios')">Exercícios</button>
@@ -893,10 +893,7 @@ table.mapa .tipo{font-weight:800;color:var(--azul);}
 ═══════════════════════════════════════════════════════ -->
 <div id="tela-exercicios" class="tela">
   <div class="topbar">
-    <div>
-      <div class="topbar-titulo">📝 Exercícios</div>
-      <div class="topbar-user" id="topbar-user2"></div>
-    </div>
+    <div class="topbar-user" id="topbar-user2" style="font-size:.72rem;color:rgba(255,255,255,.7);"></div>
     <div class="topbar-nav">
       <button class="tnav" onclick="irPara('conteudo')">Conteúdo</button>
       <button class="tnav on" onclick="irPara('exercicios')">Exercícios</button>
@@ -1052,10 +1049,7 @@ table.mapa .tipo{font-weight:800;color:var(--azul);}
 ═══════════════════════════════════════════════════════ -->
 <div id="tela-analisador" class="tela">
   <div class="topbar">
-    <div>
-      <div class="topbar-titulo">🔍 Analisador de Frases</div>
-      <div class="topbar-user" id="topbar-user3"></div>
-    </div>
+    <div class="topbar-user" id="topbar-user3" style="font-size:.72rem;color:rgba(255,255,255,.7);"></div>
     <div class="topbar-nav">
       <button class="tnav" onclick="irPara('conteudo')">Conteúdo</button>
       <button class="tnav" onclick="irPara('exercicios')">Exercícios</button>
@@ -1242,6 +1236,7 @@ async function fazerLogin(){
   document.getElementById('topbar-user').textContent = nomeCompleto;
   document.getElementById('topbar-user2').textContent = nomeCompleto;
   document.getElementById('topbar-user3').textContent = nomeCompleto;
+  document.getElementById('menu-bar-user').textContent = nomeCompleto;
 
   ativarTela('tela-conteudo');
   document.getElementById('tela-auth').style.display='none';
