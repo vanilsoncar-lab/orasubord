@@ -312,9 +312,15 @@ table.mapa .tipo{font-weight:800;color:var(--azul);}
      TELA: AUTENTICAÇÃO
 ═══════════════════════════════════════════════════════ -->
 <div id="tela-auth" class="tela ativa">
-  <div class="auth-logo">📝</div>
+  <!-- Logo escola -->
+  <div style="margin-bottom:10px;margin-top:4px;">
+    <img src="data:image/jpeg;base64,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" 
+         alt="Logo E.M.F. Soares de Barros" 
+         width="80" height="80"
+         style="border-radius:50%;border:3px solid rgba(255,255,255,0.3);box-shadow:0 4px 16px rgba(0,0,0,0.3);object-fit:cover;background:#fff;"/>
+  </div>
   <div class="auth-titulo">Orações Subordinadas Substantivas</div>
-  <div class="auth-sub">Língua Portuguesa · 9º Ano<br>E.M.F. Soares de Barros — Cívico Militar · SMEd Ijuí</div>
+  <div class="auth-sub">Língua Portuguesa · 9º Ano<br>E.M.F. Soares de Barros — Cívico Militar</div>
 
   <div class="auth-card">
     <div class="auth-tabs">
@@ -340,12 +346,12 @@ table.mapa .tipo{font-weight:800;color:var(--azul);}
         <option value="82">8º Ano — Turma 82</option>
         <option value="83">8º Ano — Turma 83</option>
         <option value="91">9º Ano — Turma 91</option>
-        <option value="92">9º Ano — Turma 92</option>
-        <option value="93">9º Ano — Turma 93</option>
+        <option value="92">9º Ano — Turma 92 · Prof.ª Kaira</option>
+        <option value="93">9º Ano — Turma 93 · Prof.ª Jordana</option>
       </select>
       <input class="ainput" id="ca-email" type="email" placeholder="E-mail" autocomplete="username"/>
       <input class="ainput" id="ca-senha" type="password" placeholder="Senha (mín. 6 caracteres)" autocomplete="new-password"/>
-      <button class="abtn" onclick="fazerCadastro()">Criar conta</button>
+      <button class="abtn" onclick="fazerCadastro()">Criar conta e entrar</button>
       <div class="aerr" id="ca-err"></div>
       <div class="aok" id="ca-ok"></div>
     </div>
@@ -354,9 +360,9 @@ table.mapa .tipo{font-weight:800;color:var(--azul);}
   <button class="auth-prof-btn" onclick="abrirLoginProfessor()">🔑 Acesso do Professor</button>
 
   <div class="auth-rodape">
-    Professora Jordana · Turma 93 &nbsp;|&nbsp; Professora Kaira · Turma 92<br>
+    Prof.ª Kaira · Turma 92 &nbsp;|&nbsp; Prof.ª Jordana · Turma 93<br>
     E.M.F. Soares de Barros — Cívico Militar · Ijuí/RS<br>
-    Secretaria Municipal de Educação — SMEd Ijuí
+    Vers. 1.3
   </div>
 </div>
 
@@ -897,7 +903,7 @@ async function sbFetch(path, method='GET', body=null){
 /* ══════════════════════════════════════════
    ESTADO GLOBAL
 ══════════════════════════════════════════ */
-const SENHA_PROF = 'soares2025';
+const SENHA_PROF = 'kajoso1382%';
 
 let usuarioAtual = null;
 let acertos = 0;
@@ -955,23 +961,26 @@ async function fazerCadastro(){
   const check = await sbFetch(`/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}&select=email`);
   if(check.ok && check.data && check.data.length>0){
     err.textContent='Este e-mail já está cadastrado.';
-    btn.textContent='Criar conta'; btn.disabled=false; return;
+    btn.textContent='Criar conta e entrar'; btn.disabled=false; return;
   }
 
   const res = await sbFetch('/rest/v1/usuarios', 'POST', {
     nome, sobrenome: sob, turma, email, senha
   });
 
-  btn.textContent='Criar conta'; btn.disabled=false;
+  btn.textContent='Criar conta e entrar'; btn.disabled=false;
 
   if(!res.ok){
     err.textContent='Erro ao criar conta. Tente novamente.'; return;
   }
 
-  ok.textContent = `Conta criada! Bem-vindo(a), ${nome}! Agora faça login.`;
-  ['ca-nome','ca-sobrenome','ca-email','ca-senha'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('ca-turma').value='';
-  setTimeout(()=>trocarTab('entrar'),1500);
+  // Login automático após cadastro
+  ok.textContent = `Conta criada! Entrando, ${nome}...`;
+  setTimeout(async ()=>{
+    document.getElementById('li-email').value = email;
+    document.getElementById('li-senha').value = senha;
+    await fazerLogin();
+  }, 800);
 }
 
 async function fazerLogin(){
@@ -1016,6 +1025,7 @@ async function fazerLogin(){
   document.getElementById('topbar-user3').textContent = nomeCompleto;
 
   ativarTela('tela-conteudo');
+  document.getElementById('tela-auth').style.display='none';
   document.getElementById('bottom-nav').style.display='flex';
   atualizarScore();
   mostrarToast(`Bem-vindo(a), ${user.nome}! 👋`);
@@ -1236,7 +1246,7 @@ Responda APENAS em JSON com esta estrutura exata, sem texto fora do JSON:
 }`;
 
   try{
-    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+    const resp = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent('https://api.anthropic.com/v1/messages'),{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,
