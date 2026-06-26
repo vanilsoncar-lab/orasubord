@@ -872,16 +872,38 @@ table.mapa .tipo{font-weight:800;color:var(--azul);}
 ═══════════════════════════════════════════════════════ -->
 <script>
 /* ══════════════════════════════════════════
+   CONFIG SUPABASE
+══════════════════════════════════════════ */
+const SB_URL = 'https://afslfdbjnvptpvdsdpcu.supabase.co';
+const SB_KEY = 'sb_publishable_GtnZ_DX-hhHiBwNy-1_nSg_0LuFoyr9';
+
+async function sbFetch(path, method='GET', body=null){
+  const opts = {
+    method,
+    headers:{
+      'Content-Type':'application/json',
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Prefer': method==='POST' ? 'return=representation' : ''
+    }
+  };
+  if(body) opts.body = JSON.stringify(body);
+  const r = await fetch(SB_URL + path, opts);
+  const txt = await r.text();
+  try{ return { ok: r.ok, status: r.status, data: txt ? JSON.parse(txt) : null }; }
+  catch(e){ return { ok: r.ok, status: r.status, data: txt }; }
+}
+
+/* ══════════════════════════════════════════
    ESTADO GLOBAL
 ══════════════════════════════════════════ */
 const SENHA_PROF = 'soares2025';
-const DB_KEY = 'oda_oracoes_users';
-const PROG_KEY = 'oda_oracoes_prog';
 
 let usuarioAtual = null;
-let progresso = {};
+let acertos = 0;
+let questoesRespondidas = new Set();
+let lacunasRespondidas = new Set();
 
-// Gabaritos
 const GABARITOS = {
   q1:'b', q2:'a', q3:'b', q4:'c', q5:'c', q6:'b'
 };
@@ -900,26 +922,6 @@ const FEEDBACK = {
       err:'Releia. Os dois-pontos após "o seguinte" indicam que a oração seguinte é um aposto explicativo → Apositiva.'}
 };
 
-let acertos = 0;
-let questoesRespondidas = new Set();
-let lacunasRespondidas = new Set();
-
-/* ══════════════════════════════════════════
-   PERSISTÊNCIA (localStorage)
-══════════════════════════════════════════ */
-function carregarBD(){
-  try{ return JSON.parse(localStorage.getItem(DB_KEY))||{}; }catch(e){ return {}; }
-}
-function salvarBD(db){
-  localStorage.setItem(DB_KEY, JSON.stringify(db));
-}
-function carregarProg(){
-  try{ return JSON.parse(localStorage.getItem(PROG_KEY))||{}; }catch(e){ return {}; }
-}
-function salvarProg(p){
-  localStorage.setItem(PROG_KEY, JSON.stringify(p));
-}
-
 /* ══════════════════════════════════════════
    AUTH
 ══════════════════════════════════════════ */
@@ -930,7 +932,7 @@ function trocarTab(tab){
   event.target.classList.add('on');
 }
 
-function fazerCadastro(){
+async function fazerCadastro(){
   const nome = document.getElementById('ca-nome').value.trim();
   const sob = document.getElementById('ca-sobrenome').value.trim();
   const turma = document.getElementById('ca-turma').value;
@@ -946,37 +948,69 @@ function fazerCadastro(){
   if(senha.length<6){ err.textContent='Senha deve ter pelo menos 6 caracteres.'; return; }
   if(!email.includes('@')){ err.textContent='E-mail inválido.'; return; }
 
-  const db = carregarBD();
-  if(db[email]){ err.textContent='Este e-mail já está cadastrado.'; return; }
+  const btn = document.querySelector('#tab-cadastrar .abtn');
+  btn.textContent='Criando conta...'; btn.disabled=true;
 
-  db[email] = { nome, sobrenome:sob, turma, email, senha,
-    criadoEm: new Date().toISOString(), progresso:{} };
-  salvarBD(db);
+  // Verificar se email já existe
+  const check = await sbFetch(`/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}&select=email`);
+  if(check.ok && check.data && check.data.length>0){
+    err.textContent='Este e-mail já está cadastrado.';
+    btn.textContent='Criar conta'; btn.disabled=false; return;
+  }
+
+  const res = await sbFetch('/rest/v1/usuarios', 'POST', {
+    nome, sobrenome: sob, turma, email, senha
+  });
+
+  btn.textContent='Criar conta'; btn.disabled=false;
+
+  if(!res.ok){
+    err.textContent='Erro ao criar conta. Tente novamente.'; return;
+  }
+
   ok.textContent = `Conta criada! Bem-vindo(a), ${nome}! Agora faça login.`;
   ['ca-nome','ca-sobrenome','ca-email','ca-senha'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ca-turma').value='';
   setTimeout(()=>trocarTab('entrar'),1500);
 }
 
-function fazerLogin(){
+async function fazerLogin(){
   const email = document.getElementById('li-email').value.trim().toLowerCase();
   const senha = document.getElementById('li-senha').value;
   const err = document.getElementById('li-err');
   err.textContent='';
 
-  const db = carregarBD();
-  if(!db[email]){ err.textContent='E-mail não encontrado.'; return; }
-  if(db[email].senha!==senha){ err.textContent='Senha incorreta.'; return; }
+  const btn = document.querySelector('#tab-entrar .abtn');
+  btn.textContent='Entrando...'; btn.disabled=true;
 
-  usuarioAtual = db[email];
-  progresso = carregarProg();
-  if(!progresso[email]) progresso[email]={ acertos:0, respondidas:[], analisadas:0, ultimaVez:'' };
+  const res = await sbFetch(`/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}&select=*`);
 
-  // Restaurar progresso
-  acertos = progresso[email].acertos || 0;
-  questoesRespondidas = new Set(progresso[email].respondidas || []);
+  btn.textContent='Entrar'; btn.disabled=false;
 
-  const nomeCompleto = `${usuarioAtual.nome} ${usuarioAtual.sobrenome}`;
+  if(!res.ok || !res.data || res.data.length===0){
+    err.textContent='E-mail não encontrado.'; return;
+  }
+  const user = res.data[0];
+  if(user.senha !== senha){
+    err.textContent='Senha incorreta.'; return;
+  }
+
+  usuarioAtual = user;
+
+  // Carregar progresso
+  const prog = await sbFetch(`/rest/v1/progresso?email=eq.${encodeURIComponent(email)}&select=*`);
+  if(prog.ok && prog.data && prog.data.length>0){
+    const p = prog.data[0];
+    acertos = p.acertos || 0;
+    questoesRespondidas = new Set(p.respondidas || []);
+  }
+
+  // Atualizar ultima_vez
+  await sbFetch(`/rest/v1/progresso?email=eq.${encodeURIComponent(email)}`, 'PATCH', {
+    ultima_vez: new Date().toISOString()
+  });
+
+  const nomeCompleto = `${user.nome} ${user.sobrenome}`;
   document.getElementById('topbar-user').textContent = nomeCompleto;
   document.getElementById('topbar-user2').textContent = nomeCompleto;
   document.getElementById('topbar-user3').textContent = nomeCompleto;
@@ -984,16 +1018,20 @@ function fazerLogin(){
   ativarTela('tela-conteudo');
   document.getElementById('bottom-nav').style.display='flex';
   atualizarScore();
-  mostrarToast(`Bem-vindo(a), ${usuarioAtual.nome}! 👋`);
+  mostrarToast(`Bem-vindo(a), ${user.nome}! 👋`);
 }
 
-function salvarProgressoAtual(){
+async function salvarProgressoAtual(){
   if(!usuarioAtual) return;
-  if(!progresso[usuarioAtual.email]) progresso[usuarioAtual.email]={};
-  progresso[usuarioAtual.email].acertos = acertos;
-  progresso[usuarioAtual.email].respondidas = [...questoesRespondidas];
-  progresso[usuarioAtual.email].ultimaVez = new Date().toISOString();
-  salvarProg(progresso);
+  const email = usuarioAtual.email;
+  const payload = {
+    email,
+    acertos,
+    respondidas: [...questoesRespondidas],
+    ultima_vez: new Date().toISOString()
+  };
+  // Upsert
+  await sbFetch('/rest/v1/progresso?on_conflict=email', 'POST', payload).catch(()=>{});
 }
 
 /* ══════════════════════════════════════════
@@ -1009,49 +1047,59 @@ function abrirLoginProfessor(){
 function fecharPainel(){
   document.getElementById('painel-prof').style.display='none';
 }
-function validarSenhaProfessor(){
+async function validarSenhaProfessor(){
   const senha = document.getElementById('pp-senha-inp').value;
   if(senha===SENHA_PROF){
     document.getElementById('pp-auth-wrap').style.display='none';
     document.getElementById('pp-conteudo').style.display='block';
-    renderizarPainel('todos');
+    await renderizarPainel('todos');
   } else {
     document.getElementById('pp-err').textContent='Senha incorreta.';
   }
 }
 
 let filtroAtual = 'todos';
-function filtrarTurma(turma, btn){
+async function filtrarTurma(turma, btn){
   filtroAtual = turma;
   document.querySelectorAll('.pp-filtro').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
-  renderizarPainel(turma);
+  await renderizarPainel(turma);
 }
 
-function renderizarPainel(filtro){
-  const db = carregarBD();
-  const prog = carregarProg();
-  const alunos = Object.values(db);
-  const filtrados = filtro==='todos' ? alunos : alunos.filter(a=>a.turma===filtro);
+async function renderizarPainel(filtro){
+  const lista = document.getElementById('pp-lista');
+  lista.innerHTML='<p style="color:rgba(255,255,255,.5);text-align:center;padding:20px;font-size:.82rem;">Carregando...</p>';
+
+  const resU = await sbFetch('/rest/v1/usuarios?select=*&order=nome.asc');
+  const resP = await sbFetch('/rest/v1/progresso?select=*');
+
+  if(!resU.ok){ lista.innerHTML='<p style="color:#ff8888;text-align:center;padding:20px;">Erro ao carregar dados.</p>'; return; }
+
+  const todosAlunos = resU.data || [];
+  const todoProg = resP.data || [];
+  const progMap = {};
+  todoProg.forEach(p=>{ progMap[p.email]=p; });
+
+  const filtrados = filtro==='todos' ? todosAlunos : todosAlunos.filter(a=>a.turma===filtro);
+
+  const iniciaram = filtrados.filter(a=>progMap[a.email]&&progMap[a.email].respondidas&&progMap[a.email].respondidas.length>0);
+  const concluiram = filtrados.filter(a=>progMap[a.email]&&progMap[a.email].respondidas&&progMap[a.email].respondidas.length>=8);
 
   document.getElementById('pp-total').textContent = filtrados.length;
-  const iniciaram = filtrados.filter(a=>prog[a.email]&&prog[a.email].respondidas&&prog[a.email].respondidas.length>0);
-  const concluiram = filtrados.filter(a=>prog[a.email]&&prog[a.email].respondidas&&prog[a.email].respondidas.length>=8);
   document.getElementById('pp-ativos').textContent = iniciaram.length;
   document.getElementById('pp-concluidos').textContent = concluiram.length;
 
-  const lista = document.getElementById('pp-lista');
   if(!filtrados.length){
     lista.innerHTML='<p style="color:rgba(255,255,255,.4);text-align:center;padding:20px;font-size:.82rem;">Nenhum aluno nesta turma.</p>';
     return;
   }
 
-  lista.innerHTML = filtrados.sort((a,b)=>a.nome.localeCompare(b.nome)).map(a=>{
-    const p = prog[a.email]||{};
+  lista.innerHTML = filtrados.map(a=>{
+    const p = progMap[a.email]||{};
     const resp = p.respondidas ? p.respondidas.length : 0;
     const ac = p.acertos || 0;
     const pct = Math.round((resp/8)*100);
-    const ultima = p.ultimaVez ? new Date(p.ultimaVez).toLocaleDateString('pt-BR') : '—';
+    const ultima = p.ultima_vez ? new Date(p.ultima_vez).toLocaleDateString('pt-BR') : '—';
     const ana = p.analisadas||0;
     return `<div class="pp-aluno">
       <div class="pp-aluno-nome">${a.nome} ${a.sobrenome}</div>
@@ -1066,20 +1114,18 @@ function renderizarPainel(filtro){
   }).join('');
 }
 
-function resetarAluno(email){
+async function resetarAluno(email){
   if(!confirm(`Resetar progresso de ${email}?`)) return;
-  const prog = carregarProg();
-  delete prog[email];
-  salvarProg(prog);
-  renderizarPainel(filtroAtual);
+  await sbFetch(`/rest/v1/progresso?email=eq.${encodeURIComponent(email)}`, 'DELETE');
+  await renderizarPainel(filtroAtual);
   mostrarToast('Progresso resetado.');
 }
 
-function excluirAluno(email){
+async function excluirAluno(email){
   if(!confirm(`Excluir a conta de ${email}? Esta ação não pode ser desfeita.`)) return;
-  const db = carregarBD(); delete db[email]; salvarBD(db);
-  const prog = carregarProg(); delete prog[email]; salvarProg(prog);
-  renderizarPainel(filtroAtual);
+  await sbFetch(`/rest/v1/progresso?email=eq.${encodeURIComponent(email)}`, 'DELETE');
+  await sbFetch(`/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}`, 'DELETE');
+  await renderizarPainel(filtroAtual);
   mostrarToast('Conta excluída.');
 }
 
@@ -1094,7 +1140,6 @@ function irPara(secao){
   const mapa = {conteudo:'tela-conteudo',exercicios:'tela-exercicios',analisador:'tela-analisador'};
   ativarTela(mapa[secao]);
   window.scrollTo(0,0);
-  // atualizar bottom nav
   document.querySelectorAll('.bnav').forEach(b=>b.classList.remove('on'));
   document.getElementById('bn-'+secao).classList.add('on');
 }
@@ -1111,23 +1156,14 @@ function responder(qId, opcaoEl, gabarito){
   todas.forEach(o=>o.classList.add('desativada'));
 
   const letras = ['a','b','c','d'];
-  const idx = letras.indexOf(gabarito);
+  const idx = letras.indexOf(GABARITOS[qId]);
   const correta = container.querySelectorAll('.opcao')[idx];
-  const gabAluno = opcaoEl.dataset?.gab || gabarito;
-
-  // Detectar qual foi clicada
   const clicadaIdx = Array.from(todas).indexOf(opcaoEl);
   const clicadaLetra = letras[clicadaIdx];
-
   const acertou = clicadaLetra === GABARITOS[qId];
 
-  if(acertou){
-    opcaoEl.classList.add('correta');
-    acertos++;
-  } else {
-    opcaoEl.classList.add('errada');
-    correta.classList.add('correta');
-  }
+  if(acertou){ opcaoEl.classList.add('correta'); acertos++; }
+  else { opcaoEl.classList.add('errada'); correta.classList.add('correta'); }
 
   const fb = document.getElementById('fb-'+qId);
   fb.style.display='block';
@@ -1143,7 +1179,7 @@ function verificarLacuna(inputId, respCorreta, qId){
   const inp = document.getElementById(inputId);
   const val = inp.value.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   const cor = respCorreta.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  const acertou = val === cor || cor.includes(val) && val.length>4;
+  const acertou = val===cor || (cor.includes(val) && val.length>4);
 
   inp.classList.add(acertou?'ok':'err');
   lacunasRespondidas.add(qId);
@@ -1154,23 +1190,20 @@ function verificarLacuna(inputId, respCorreta, qId){
   if(acertou){
     acertos++;
     fb.className='q-feedback ok';
-    fb.textContent = `✅ Correto! A resposta é "${respCorreta}".`;
+    fb.textContent=`✅ Correto! A resposta é "${respCorreta}".`;
   } else {
     fb.className='q-feedback err';
-    fb.textContent = `❌ A resposta correta é "${respCorreta}". Revise o conteúdo!`;
-    inp.value = respCorreta;
-    inp.classList.remove('err');
-    inp.classList.add('ok');
+    fb.textContent=`❌ A resposta correta é "${respCorreta}". Revise o conteúdo!`;
+    inp.value=respCorreta; inp.classList.remove('err'); inp.classList.add('ok');
   }
   atualizarScore();
   salvarProgressoAtual();
 }
 
 function atualizarScore(){
-  const total = 8;
-  const pct = Math.round((acertos/total)*100);
-  document.getElementById('score-num').textContent = `${acertos} / ${total}`;
-  document.getElementById('score-fill').style.width = pct+'%';
+  const pct = Math.round((acertos/8)*100);
+  document.getElementById('score-num').textContent=`${acertos} / 8`;
+  document.getElementById('score-fill').style.width=pct+'%';
 }
 
 /* ══════════════════════════════════════════
@@ -1182,35 +1215,32 @@ async function analisarFrase(){
   if(frase.length<10){ mostrarToast('Frase muito curta.'); return; }
 
   const res = document.getElementById('ana-resultado');
-  res.innerHTML = `<div class="ana-loading"><div class="ana-spinner"></div><br>Analisando a estrutura sintática...</div>`;
+  res.innerHTML=`<div class="ana-loading"><div class="ana-spinner"></div><br>Analisando a estrutura sintática...</div>`;
 
-  const prompt = `Você é um professor de Língua Portuguesa do Ensino Fundamental (9º ano) especializado em sintaxe. Analise a frase abaixo do ponto de vista das ORAÇÕES SUBORDINADAS SUBSTANTIVAS (subjetiva, objetiva direta, objetiva indireta, completiva nominal, predicativa, apositiva).
+  const prompt=`Você é um professor de Língua Portuguesa do Ensino Fundamental (9º ano) especializado em sintaxe. Analise a frase abaixo do ponto de vista das ORAÇÕES SUBORDINADAS SUBSTANTIVAS (subjetiva, objetiva direta, objetiva indireta, completiva nominal, predicativa, apositiva).
 
 Frase: "${frase}"
 
 Responda APENAS em JSON com esta estrutura exata, sem texto fora do JSON:
 {
   "fraseOriginal": "...",
-  "temSubordinada": true/false,
+  "temSubordinada": true,
   "oracaoPrincipal": "...",
-  "oracaoSubordinada": "... (ou null se não houver)",
-  "classificacao": "... (nome do tipo, ou null)",
-  "funcaoSintatica": "... (ex: sujeito, objeto direto, etc., ou null)",
-  "conector": "... (conjunção ou preposição+conector, ou null)",
-  "explicacao": "... (explicação didática em 2-3 frases simples para aluno do 9º ano)",
-  "dica": "... (uma dica curta de como identificar esse tipo)",
-  "alerta": "... (null, ou aviso caso a frase não tenha oração subordinada substantiva)"
+  "oracaoSubordinada": "...",
+  "classificacao": "...",
+  "funcaoSintatica": "...",
+  "conector": "...",
+  "explicacao": "...",
+  "dica": "...",
+  "alerta": null
 }`;
 
-  try {
+  try{
     const resp = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:1000,
-        messages:[{role:'user',content:prompt}]
-      })
+      body: JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,
+        messages:[{role:'user',content:prompt}]})
     });
     const data = await resp.json();
     const texto = (data.content||[]).map(i=>i.text||'').join('');
@@ -1218,32 +1248,31 @@ Responda APENAS em JSON com esta estrutura exata, sem texto fora do JSON:
     const json = JSON.parse(clean);
     renderizarAnalise(json);
 
-    // Salvar progresso
     if(usuarioAtual){
-      const prog = carregarProg();
-      if(!prog[usuarioAtual.email]) prog[usuarioAtual.email]={};
-      prog[usuarioAtual.email].analisadas = (prog[usuarioAtual.email].analisadas||0)+1;
-      prog[usuarioAtual.email].ultimaVez = new Date().toISOString();
-      salvarProg(prog);
+      const email = usuarioAtual.email;
+      const prog = await sbFetch(`/rest/v1/progresso?email=eq.${encodeURIComponent(email)}&select=analisadas`);
+      const anaAtual = (prog.ok && prog.data && prog.data[0]) ? (prog.data[0].analisadas||0) : 0;
+      await sbFetch(`/rest/v1/progresso?on_conflict=email`, 'POST', {
+        email, analisadas: anaAtual+1, ultima_vez: new Date().toISOString()
+      }).catch(()=>{});
     }
   } catch(e){
-    res.innerHTML = `<div class="ana-resultado"><div class="ana-erro">❌ Erro ao analisar. Verifique sua conexão e tente novamente.</div></div>`;
+    res.innerHTML=`<div class="ana-resultado"><div class="ana-erro">❌ Erro ao analisar. Verifique sua conexão e tente novamente.</div></div>`;
   }
 }
 
 function renderizarAnalise(d){
   const res = document.getElementById('ana-resultado');
   if(!d.temSubordinada){
-    res.innerHTML = `<div class="ana-card">
+    res.innerHTML=`<div class="ana-card">
       <div class="ana-card-titulo">📋 Resultado da Análise</div>
       <div class="ana-frase-original">"${d.fraseOriginal}"</div>
-      <div class="ana-alerta">⚠️ ${d.alerta || 'Esta frase não contém uma oração subordinada substantiva clara. Tente uma frase com verbos como: saber que, querer que, é preciso que, etc.'}</div>
+      <div class="ana-alerta">⚠️ ${d.alerta||'Esta frase não contém uma oração subordinada substantiva clara. Tente uma frase com verbos como: saber que, querer que, é preciso que, etc.'}</div>
       <div class="ana-texto">${d.explicacao||''}</div>
     </div>`;
     return;
   }
-
-  res.innerHTML = `
+  res.innerHTML=`
   <div class="ana-card">
     <div class="ana-card-titulo">📋 Frase analisada</div>
     <div class="ana-frase-original">"${d.fraseOriginal}"</div>
@@ -1253,7 +1282,6 @@ function renderizarAnalise(d){
       ${d.conector?`<span class="ana-chip chip-conec">🔗 conector: "${d.conector}"</span>`:''}
     </div>
   </div>
-
   <div class="ana-card">
     <div class="ana-card-titulo">🔵 Divisão das Orações</div>
     <div class="ana-secao">
@@ -1265,7 +1293,6 @@ function renderizarAnalise(d){
       <div class="ana-texto" style="background:#fee2e2;padding:8px 12px;border-radius:8px;font-weight:600;color:#7f1d1d;">"${d.oracaoSubordinada||'—'}"</div>
     </div>
   </div>
-
   <div class="ana-card">
     <div class="ana-card-titulo">📖 Explicação</div>
     <div class="ana-texto">${d.explicacao||'—'}</div>
@@ -1278,19 +1305,16 @@ function renderizarAnalise(d){
    UTILS
 ══════════════════════════════════════════ */
 function mostrarToast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2800);
 }
 
-// Permitir Enter nos inputs de login
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'){
-    const el = e.target;
-    if(el.id==='li-senha') fazerLogin();
-    if(el.id==='ca-senha') fazerCadastro();
-    if(el.id==='pp-senha-inp') validarSenhaProfessor();
+    if(e.target.id==='li-senha') fazerLogin();
+    if(e.target.id==='ca-senha') fazerCadastro();
+    if(e.target.id==='pp-senha-inp') validarSenhaProfessor();
   }
 });
 </script>
