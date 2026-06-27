@@ -277,28 +277,62 @@ table.mapa .tipo{font-weight:800;color:var(--azul);}
   padding:12px;font-size:.85rem;color:#991b1b;text-align:center;}
 
 /* ══════════════════════════════════════════
-   MENU SUPERIOR
+   TOPBAR ÚNICA (fixa no topo após login)
 ══════════════════════════════════════════ */
-.menu-bar{
-  position:fixed;top:0;left:0;right:0;z-index:300;
+.main-header{
+  position:fixed;top:0;left:0;right:0;z-index:400;
   background:linear-gradient(90deg,#0f2540,#1a3a5c);
-  display:flex;justify-content:space-between;align-items:center;
-  padding:6px 12px;box-shadow:0 2px 10px rgba(0,0,0,.3);min-height:44px;
+  height:48px;display:flex;align-items:center;
+  justify-content:space-between;padding:0 14px;
+  box-shadow:0 2px 10px rgba(0,0,0,.3);
 }
-.menu-bar-titulo{font-size:.72rem;font-weight:800;color:rgba(255,255,255,.7);letter-spacing:.3px;}
-.menu-btn-wrap{display:flex;gap:6px;}
-.mbtn{padding:5px 10px;border:1.5px solid rgba(255,255,255,.2);border-radius:16px;
-  background:transparent;color:rgba(255,255,255,.8);font-size:.65rem;font-weight:700;
-  cursor:pointer;transition:.2s;display:flex;align-items:center;gap:4px;}
-.mbtn:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.4);}
-.mbtn.mbtn-sair{border-color:rgba(255,100,100,.4);color:#ffaaaa;}
-.mbtn.mbtn-sair:hover{background:rgba(200,50,50,.2);}
+.mh-left{display:flex;flex-direction:column;gap:1px;}
+.mh-titulo{font-size:.78rem;font-weight:800;color:#fff;letter-spacing:.2px;}
+.mh-user{font-size:.62rem;color:rgba(255,255,255,.5);}
+.mh-center{display:flex;gap:6px;}
+.mh-nav{padding:5px 11px;border:1.5px solid rgba(255,255,255,.2);border-radius:16px;
+  background:transparent;color:rgba(255,255,255,.75);font-size:.7rem;font-weight:700;
+  cursor:pointer;transition:.2s;}
+.mh-nav:hover,.mh-nav.on{background:var(--ouro);border-color:var(--ouro);color:#1a2030;}
+.mh-hamburguer{width:36px;height:36px;border:none;background:rgba(255,255,255,.1);
+  border-radius:9px;cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:4px;flex-shrink:0;}
+.mh-hamburguer span{display:block;width:18px;height:2px;background:#fff;
+  border-radius:2px;transition:.3s;}
+.mh-hamburguer.aberto span:nth-child(1){transform:translateY(6px) rotate(45deg);}
+.mh-hamburguer.aberto span:nth-child(2){opacity:0;}
+.mh-hamburguer.aberto span:nth-child(3){transform:translateY(-6px) rotate(-45deg);}
 
-/* Offset das telas para não esconder atrás do menu */
+/* ── Drawer lateral ── */
+.drawer-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.5);
+  opacity:0;pointer-events:none;transition:.25s;}
+.drawer-overlay.aberto{opacity:1;pointer-events:all;}
+.drawer{position:fixed;top:0;right:-240px;bottom:0;width:220px;z-index:600;
+  background:linear-gradient(180deg,#0f2540 0%,#1a3a5c 100%);
+  padding:60px 0 20px;transition:.28s cubic-bezier(.4,0,.2,1);
+  box-shadow:-4px 0 24px rgba(0,0,0,.4);display:flex;flex-direction:column;}
+.drawer.aberto{right:0;}
+.drawer-item{display:flex;align-items:center;gap:12px;padding:14px 20px;
+  border:none;background:transparent;color:rgba(255,255,255,.85);
+  font-size:.88rem;font-weight:600;cursor:pointer;width:100%;text-align:left;
+  transition:.2s;border-bottom:1px solid rgba(255,255,255,.06);}
+.drawer-item:hover{background:rgba(255,255,255,.08);}
+.drawer-item.vermelho{color:#ffaaaa;}
+.drawer-item.vermelho:hover{background:rgba(200,50,50,.2);}
+.drawer-item-icon{font-size:1.1rem;width:24px;text-align:center;}
+.drawer-versao{margin-top:auto;padding:14px 20px;font-size:.65rem;
+  color:rgba(255,255,255,.3);text-align:center;}
+
+/* ── Offset das telas ── */
 #tela-conteudo,#tela-exercicios,#tela-analisador{ padding-top:0; }
-#tela-conteudo .topbar,
-#tela-exercicios .topbar,
-#tela-analisador .topbar{ top:44px; position:sticky; }
+.subtopbar{background:linear-gradient(90deg,var(--azul),var(--azul-m));
+  position:sticky;top:48px;z-index:100;display:flex;justify-content:center;
+  gap:8px;padding:7px 14px;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+.tnav{padding:6px 14px;border:1.5px solid rgba(255,255,255,.25);border-radius:20px;
+  background:transparent;color:rgba(255,255,255,.8);font-size:.72rem;font-weight:700;
+  cursor:pointer;transition:.2s;}
+.tnav:hover{background:rgba(255,255,255,.12);}
+.tnav.on{background:var(--ouro);border-color:var(--ouro);color:#1a2030;}
 
 /* ══════════════════════════════════════════
    MODAIS (manual / sobre / confirmação)
@@ -385,19 +419,45 @@ table.mapa .tipo{font-weight:800;color:var(--azul);}
 <div id="toast"></div>
 
 <!-- ═══════════════════════════════════════════════════════
-     MENU SUPERIOR (visível após login)
+     HEADER FIXO + DRAWER (visível após login)
 ═══════════════════════════════════════════════════════ -->
-<div class="menu-bar" id="menu-bar" style="display:none;">
-  <div style="display:flex;flex-direction:column;gap:1px;">
-    <div class="menu-bar-titulo">📝 Orações Subordinadas</div>
-    <div id="menu-bar-user" style="font-size:.62rem;color:rgba(255,255,255,.5);"></div>
+<div class="main-header" id="menu-bar" style="display:none;">
+  <div class="mh-left">
+    <div class="mh-titulo">📝 Orações Subordinadas</div>
+    <div class="mh-user" id="menu-bar-user"></div>
   </div>
-  <div class="menu-btn-wrap">
-    <button class="mbtn" onclick="abrirModal('modal-manual')" title="Manual">📖 Manual</button>
-    <button class="mbtn" onclick="abrirModal('modal-sobre')" title="Sobre">ℹ️ Sobre</button>
-    <button class="mbtn" onclick="abrirModal('modal-reiniciar')" title="Reiniciar">🔄</button>
-    <button class="mbtn mbtn-sair" onclick="fazerSair()" title="Sair">⏻ Sair</button>
-  </div>
+  <button class="mh-hamburguer" id="hamburguer-btn" onclick="toggleDrawer()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</div>
+
+<!-- Overlay do drawer -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="fecharDrawer()"></div>
+
+<!-- Drawer lateral -->
+<div class="drawer" id="drawer">
+  <button class="drawer-item" onclick="irParaDrawer('conteudo')">
+    <span class="drawer-item-icon">📚</span> Conteúdo
+  </button>
+  <button class="drawer-item" onclick="irParaDrawer('exercicios')">
+    <span class="drawer-item-icon">✏️</span> Exercícios
+  </button>
+  <button class="drawer-item" onclick="irParaDrawer('analisador')">
+    <span class="drawer-item-icon">🔍</span> Analisador
+  </button>
+  <button class="drawer-item" onclick="abrirModalDrawer('modal-manual')">
+    <span class="drawer-item-icon">📖</span> Manual
+  </button>
+  <button class="drawer-item" onclick="abrirModalDrawer('modal-sobre')">
+    <span class="drawer-item-icon">ℹ️</span> Sobre
+  </button>
+  <button class="drawer-item" onclick="abrirModalDrawer('modal-reiniciar')">
+    <span class="drawer-item-icon">🔄</span> Reiniciar percurso
+  </button>
+  <button class="drawer-item vermelho" onclick="fazerSairDrawer()">
+    <span class="drawer-item-icon">⏻</span> Sair
+  </button>
+  <div class="drawer-versao">Vers. 1.4 · E.M.F. Soares de Barros</div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════
@@ -632,12 +692,10 @@ table.mapa .tipo{font-weight:800;color:var(--azul);}
      TELA: CONTEÚDO
 ═══════════════════════════════════════════════════════ -->
 <div id="tela-conteudo" class="tela">
-  <div class="topbar">
-    <div class="topbar-nav">
-      <button class="tnav on" onclick="irPara('conteudo')">Conteúdo</button>
-      <button class="tnav" onclick="irPara('exercicios')">Exercícios</button>
-      <button class="tnav" onclick="irPara('analisador')">Analisador</button>
-    </div>
+  <div class="subtopbar">
+    <button class="tnav on" id="nav-conteudo" onclick="irPara('conteudo')">Conteúdo</button>
+    <button class="tnav" id="nav-exercicios" onclick="irPara('exercicios')">Exercícios</button>
+    <button class="tnav" id="nav-analisador" onclick="irPara('analisador')">Analisador</button>
   </div>
 
   <!-- HERO -->
@@ -891,12 +949,10 @@ table.mapa .tipo{font-weight:800;color:var(--azul);}
      TELA: EXERCÍCIOS
 ═══════════════════════════════════════════════════════ -->
 <div id="tela-exercicios" class="tela">
-  <div class="topbar">
-    <div class="topbar-nav">
-      <button class="tnav" onclick="irPara('conteudo')">Conteúdo</button>
-      <button class="tnav on" onclick="irPara('exercicios')">Exercícios</button>
-      <button class="tnav" onclick="irPara('analisador')">Analisador</button>
-    </div>
+  <div class="subtopbar">
+    <button class="tnav" id="nav-conteudo2" onclick="irPara('conteudo')">Conteúdo</button>
+    <button class="tnav on" id="nav-exercicios2" onclick="irPara('exercicios')">Exercícios</button>
+    <button class="tnav" id="nav-analisador2" onclick="irPara('analisador')">Analisador</button>
   </div>
 
   <!-- Score bar -->
@@ -1046,12 +1102,10 @@ table.mapa .tipo{font-weight:800;color:var(--azul);}
      TELA: ANALISADOR
 ═══════════════════════════════════════════════════════ -->
 <div id="tela-analisador" class="tela">
-  <div class="topbar">
-    <div class="topbar-nav">
-      <button class="tnav" onclick="irPara('conteudo')">Conteúdo</button>
-      <button class="tnav" onclick="irPara('exercicios')">Exercícios</button>
-      <button class="tnav on" onclick="irPara('analisador')">Analisador</button>
-    </div>
+  <div class="subtopbar">
+    <button class="tnav" id="nav-conteudo3" onclick="irPara('conteudo')">Conteúdo</button>
+    <button class="tnav" id="nav-exercicios3" onclick="irPara('exercicios')">Exercícios</button>
+    <button class="tnav on" id="nav-analisador3" onclick="irPara('analisador')">Analisador</button>
   </div>
 
   <div class="ana-hero">
@@ -1396,8 +1450,15 @@ function irPara(secao){
   const mapa = {conteudo:'tela-conteudo',exercicios:'tela-exercicios',analisador:'tela-analisador'};
   ativarTela(mapa[secao]);
   window.scrollTo(0,0);
+  // Subtopbar
+  const labels = {conteudo:'conteúdo',exercicios:'exercícios',analisador:'analisador'};
+  document.querySelectorAll('.subtopbar .tnav').forEach(b=>{
+    b.classList.toggle('on', b.textContent.trim().toLowerCase()===labels[secao]);
+  });
+  // Bottom nav
   document.querySelectorAll('.bnav').forEach(b=>b.classList.remove('on'));
-  document.getElementById('bn-'+secao).classList.add('on');
+  const bn = document.getElementById('bn-'+secao);
+  if(bn) bn.classList.add('on');
 }
 
 /* ══════════════════════════════════════════
@@ -2150,15 +2211,31 @@ function mostrarToast(msg){
 }
 
 /* ══════════════════════════════════════════
-   MENU SUPERIOR
+   HAMBÚRGUER / DRAWER
 ══════════════════════════════════════════ */
+function toggleDrawer(){
+  const drawer = document.getElementById('drawer');
+  const overlay = document.getElementById('drawer-overlay');
+  const btn = document.getElementById('hamburguer-btn');
+  const aberto = drawer.classList.toggle('aberto');
+  overlay.classList.toggle('aberto', aberto);
+  btn.classList.toggle('aberto', aberto);
+}
+function fecharDrawer(){
+  document.getElementById('drawer').classList.remove('aberto');
+  document.getElementById('drawer-overlay').classList.remove('aberto');
+  document.getElementById('hamburguer-btn').classList.remove('aberto');
+}
+function irParaDrawer(secao){ fecharDrawer(); irPara(secao); }
+function abrirModalDrawer(id){ fecharDrawer(); abrirModal(id); }
+function fazerSairDrawer(){ fecharDrawer(); fazerSair(); }
+
 function abrirModal(id){
   document.getElementById(id).classList.add('aberto');
 }
 function fecharModal(id){
   document.getElementById(id).classList.remove('aberto');
 }
-// Fechar modal clicando fora
 document.addEventListener('click', e=>{
   document.querySelectorAll('.modal-overlay.aberto').forEach(m=>{
     if(e.target === m) m.classList.remove('aberto');
@@ -2185,18 +2262,15 @@ function fazerSair(){
 async function confirmarReiniciar(){
   fecharModal('modal-reiniciar');
   if(!usuarioAtual){ mostrarToast('Você precisa estar logado.'); return; }
-  // Resetar estado local
   acertos = 0;
   questoesRespondidas = new Set();
   lacunasRespondidas = new Set();
   atualizarScore();
-  // Resetar visual dos exercícios
   document.querySelectorAll('.opcao').forEach(o=>{
-    o.classList.remove('correta','errada','desativada');
+    o.classList.remove('correta','errada','gabarito','desativada');
   });
   document.querySelectorAll('.q-feedback').forEach(f=>{ f.style.display='none'; });
   document.querySelectorAll('.fb-inp').forEach(i=>{ i.value=''; i.classList.remove('ok','err'); });
-  // Resetar no Supabase
   await sbFetch(`/rest/v1/progresso?email=eq.${encodeURIComponent(usuarioAtual.email)}`, 'DELETE').catch(()=>{});
   mostrarToast('Percurso reiniciado com sucesso! ✅');
 }
