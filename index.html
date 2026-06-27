@@ -113,8 +113,8 @@ body{background:var(--bg);color:var(--texto);font-family:'Segoe UI',system-ui,sa
 ══════════════════════════════════════════ */
 #tela-conteudo,#tela-exercicios,#tela-analisador{padding-bottom:50px;}
 .topbar{background:linear-gradient(90deg,var(--azul),var(--azul-m));
-  padding:14px 16px;display:flex;justify-content:space-between;align-items:center;
-  position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,.2);}
+  padding:8px 14px;display:flex;justify-content:center;align-items:center;
+  position:sticky;top:44px;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,.2);}
 .topbar-titulo{font-size:.85rem;font-weight:800;color:#fff;letter-spacing:.2px;}
 .topbar-user{font-size:.72rem;color:rgba(255,255,255,.6);max-width:120px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -283,7 +283,7 @@ table.mapa .tipo{font-weight:800;color:var(--azul);}
   position:fixed;top:0;left:0;right:0;z-index:300;
   background:linear-gradient(90deg,#0f2540,#1a3a5c);
   display:flex;justify-content:space-between;align-items:center;
-  padding:8px 14px;box-shadow:0 2px 10px rgba(0,0,0,.3);
+  padding:6px 12px;box-shadow:0 2px 10px rgba(0,0,0,.3);min-height:44px;
 }
 .menu-bar-titulo{font-size:.72rem;font-weight:800;color:rgba(255,255,255,.7);letter-spacing:.3px;}
 .menu-btn-wrap{display:flex;gap:6px;}
@@ -295,10 +295,10 @@ table.mapa .tipo{font-weight:800;color:var(--azul);}
 .mbtn.mbtn-sair:hover{background:rgba(200,50,50,.2);}
 
 /* Offset das telas para não esconder atrás do menu */
+#tela-conteudo,#tela-exercicios,#tela-analisador{ padding-top:0; }
 #tela-conteudo .topbar,
 #tela-exercicios .topbar,
-#tela-analisador .topbar{ top:36px; }
-#tela-conteudo,#tela-exercicios,#tela-analisador{ padding-top:36px; }
+#tela-analisador .topbar{ top:44px; position:sticky; }
 
 /* ══════════════════════════════════════════
    MODAIS (manual / sobre / confirmação)
@@ -633,7 +633,6 @@ table.mapa .tipo{font-weight:800;color:var(--azul);}
 ═══════════════════════════════════════════════════════ -->
 <div id="tela-conteudo" class="tela">
   <div class="topbar">
-    <div class="topbar-user" id="topbar-user" style="font-size:.72rem;color:rgba(255,255,255,.7);"></div>
     <div class="topbar-nav">
       <button class="tnav on" onclick="irPara('conteudo')">Conteúdo</button>
       <button class="tnav" onclick="irPara('exercicios')">Exercícios</button>
@@ -893,7 +892,6 @@ table.mapa .tipo{font-weight:800;color:var(--azul);}
 ═══════════════════════════════════════════════════════ -->
 <div id="tela-exercicios" class="tela">
   <div class="topbar">
-    <div class="topbar-user" id="topbar-user2" style="font-size:.72rem;color:rgba(255,255,255,.7);"></div>
     <div class="topbar-nav">
       <button class="tnav" onclick="irPara('conteudo')">Conteúdo</button>
       <button class="tnav on" onclick="irPara('exercicios')">Exercícios</button>
@@ -1049,7 +1047,6 @@ table.mapa .tipo{font-weight:800;color:var(--azul);}
 ═══════════════════════════════════════════════════════ -->
 <div id="tela-analisador" class="tela">
   <div class="topbar">
-    <div class="topbar-user" id="topbar-user3" style="font-size:.72rem;color:rgba(255,255,255,.7);"></div>
     <div class="topbar-nav">
       <button class="tnav" onclick="irPara('conteudo')">Conteúdo</button>
       <button class="tnav" onclick="irPara('exercicios')">Exercícios</button>
@@ -1116,7 +1113,43 @@ async function sbFetch(path, method='GET', body=null){
 /* ══════════════════════════════════════════
    ESTADO GLOBAL
 ══════════════════════════════════════════ */
-const SENHA_PROF = 'kajoso1382%';
+const SESS_KEY = 'oda_orasub_sess';
+
+function salvarSessao(user){
+  localStorage.setItem(SESS_KEY, JSON.stringify({ email: user.email, nome: user.nome, sobrenome: user.sobrenome, turma: user.turma }));
+}
+function limparSessao(){
+  localStorage.removeItem(SESS_KEY);
+}
+async function restaurarSessao(){
+  try{
+    const raw = localStorage.getItem(SESS_KEY);
+    if(!raw) return;
+    const sess = JSON.parse(raw);
+    if(!sess || !sess.email) return;
+    // Verificar se conta ainda existe no Supabase
+    const res = await sbFetch(`/rest/v1/usuarios?email=eq.${encodeURIComponent(sess.email)}&select=*`);
+    if(!res.ok || !res.data || res.data.length===0){ limparSessao(); return; }
+    const user = res.data[0];
+    usuarioAtual = user;
+    // Carregar progresso
+    const prog = await sbFetch(`/rest/v1/progresso?email=eq.${encodeURIComponent(user.email)}&select=*`);
+    if(prog.ok && prog.data && prog.data.length>0){
+      acertos = prog.data[0].acertos || 0;
+      questoesRespondidas = new Set(prog.data[0].respondidas || []);
+    }
+    const nomeCompleto = `${user.nome} ${user.sobrenome}`;
+    document.getElementById('menu-bar-user').textContent = nomeCompleto;
+    ativarTela('tela-conteudo');
+    document.getElementById('tela-auth').style.display='none';
+    document.getElementById('bottom-nav').style.display='flex';
+    document.getElementById('menu-bar').style.display='flex';
+    atualizarScore();
+  } catch(e){ limparSessao(); }
+}
+
+// Restaurar sessão ao carregar a página
+window.addEventListener('DOMContentLoaded', ()=>{ restaurarSessao(); });
 
 let usuarioAtual = null;
 let acertos = 0;
@@ -1218,6 +1251,7 @@ async function fazerLogin(){
   }
 
   usuarioAtual = user;
+  salvarSessao(user);
 
   // Carregar progresso
   const prog = await sbFetch(`/rest/v1/progresso?email=eq.${encodeURIComponent(email)}&select=*`);
@@ -1233,9 +1267,6 @@ async function fazerLogin(){
   });
 
   const nomeCompleto = `${user.nome} ${user.sobrenome}`;
-  document.getElementById('topbar-user').textContent = nomeCompleto;
-  document.getElementById('topbar-user2').textContent = nomeCompleto;
-  document.getElementById('topbar-user3').textContent = nomeCompleto;
   document.getElementById('menu-bar-user').textContent = nomeCompleto;
 
   ativarTela('tela-conteudo');
@@ -1552,27 +1583,46 @@ const VTD_LISTA = [
 
 // Verbos transitivos indiretos (pedem prep.) (→ OBJETIVA INDIRETA)
 const VTI_LISTA = [
-  'precisa','precisou','precisava','precisamos','precisavam',
-  'gosta','gostou','gostava','gostamos','gostavam',
-  'duvida','duvidou','duvidava','duvidamos','duvidavam',
-  'cuida','cuidou','cuidava','cuidamos','cuidavam',
-  'depende','dependeu','dependia','dependemos','dependiam',
-  'lembra','lembrou','lembrava','lembramos','lembravam',
-  'esquece','esqueceu','esquecia','esquecemos','esqueceram',
-  'concordou','concordava','concordamos','concordavam','concorda',
-  'discordou','discordava','discordamos','discordavam','discorda',
-  'necessita','necessitou','necessitava','necessitamos','necessitavam',
-  'trata','tratou','tratava','tratamos','tratavam',
+  'precisa','precisou','precisava','precisamos','precisavam','precisei','precisaram',
+  'gosta','gostou','gostava','gostamos','gostavam','gostei','gostaram',
+  'duvida','duvidou','duvidava','duvidamos','duvidavam','duvidei','duvidaram',
+  'cuida','cuidou','cuidava','cuidamos','cuidavam','cuidei','cuidaram',
+  'depende','dependeu','dependia','dependemos','dependiam','dependi','dependeram',
+  'lembra','lembrou','lembrava','lembramos','lembravam','lembrei','lembraram',
+  'esquece','esqueceu','esquecia','esquecemos','esqueceram','esqueci',
+  'concordou','concordava','concordamos','concordavam','concorda','concordei','concordaram',
+  'discordou','discordava','discordamos','discordavam','discorda','discordei','discordaram',
+  'necessita','necessitou','necessitava','necessitamos','necessitavam','necessitei',
+  'trata','tratou','tratava','tratamos','tratavam','tratei','trataram',
   'desconfia','desconfiou','desconfiava','desconfiamos','desconfiavam',
-  'insiste','insistiu','insistia','insistimos','insistiram',
-  'conta','contou','contava','contamos','contavam',
-  'aposta','apostou','apostava','apostamos','apostavam',
-  'acredita','acreditou','acreditava','acreditamos','acreditavam',
-  'confia','confiou','confiava','confiamos','confiavam',
-  'teme','temeu','temia','tememos','temeram',
-  'admira','admirou','admirava','admiramos','admiravam',
+  'insiste','insistiu','insistia','insistimos','insistiram','insisti',
+  'conta','contou','contava','contamos','contavam','contei','contaram',
+  'aposta','apostou','apostava','apostamos','apostavam','apostei','apostaram',
+  'acredita','acreditou','acreditava','acreditamos','acreditavam','acreditei','acreditaram',
+  'confia','confiou','confiava','confiamos','confiavam','confiei','confiaram',
+  'teme','temeu','temia','tememos','temeram','temi',
+  'admira','admirou','admirava','admiramos','admiravam','admirei','admiraram',
   'anseia','anseio','ansiava','ansiamos','ansiavam',
-  'aspira','aspirou','aspirava','aspiramos','aspiravam'
+  'aspira','aspirou','aspirava','aspiramos','aspiravam','aspirei',
+  'sonha','sonhou','sonhava','sonhamos','sonhavam','sonhei','sonharam',
+  'pensa','pensou','pensava','pensamos','pensavam','pensei','pensaram',
+  'tenta','tentou','tentava','tentamos','tentavam','tentei','tentaram',
+  'resolve','resolveu','resolvia','resolvemos','resolveram','resolvi',
+  'opta','optou','optava','optamos','optavam','optei','optaram',
+  'desiste','desistiu','desistia','desistimos','desistiram','desisti',
+  'deseja','desejou','desejava','desejamos','desejavam','desejei','desejaram',
+  'hesita','hesitou','hesitava','hesitamos','hesitavam','hesitei',
+  'recusa','recusou','recusava','recusamos','recusavam','recusei','recusaram',
+  'aprende','aprendeu','aprendia','aprendemos','aprenderam','aprendi',
+  'ensina','ensinou','ensinava','ensinamos','ensinavam','ensinei','ensinaram',
+  'ajuda','ajudou','ajudava','ajudamos','ajudavam','ajudei','ajudaram',
+  'tenta','tentou','tentava','tentamos','tentavam',
+  'começa','comecou','comecava','comecamos','comecavam','comecei','comecaram',
+  'continua','continuou','continuava','continuamos','continuavam','continuei',
+  'para','parou','parava','paramos','paravam','parei','pararam',
+  'deixa','deixou','deixava','deixamos','deixavam','deixei','deixaram',
+  'consegue','conseguiu','conseguia','conseguimos','conseguiram','consegui',
+  'costuma','costumou','costumava','costumamos','costumavam','costumei'
 ];
 
 // Verbos de ligação (→ PREDICATIVA quando há sujeito antes)
@@ -1687,16 +1737,38 @@ function analisarFraseLocal(frase){
   const mPrepSe   = f.match(/\b(de|em|a|para|com|por|sobre|sem|ate|apos)\s+se\b/);
   const mPrepQuem = f.match(/\b(de|em|a|para|com|por|sobre|sem)\s+quem\b/);
 
-  // Infinitivo precedido de preposição
+  // Infinitivo precedido de preposição — mas só conta se ligado a nome/verbo de conteúdo
   const INF_REGEX = /\b(de|em|a|para|com|por|sobre|sem|ate|apos)\s+([a-záàâãéêíóôõúüç]+(ar|er|ir|or))\b/i;
   const mInfPrep = frase.match(INF_REGEX);
 
-  // Verificar se existe algum marcador de subordinada substantiva
+  // "para + infinitivo" sozinho (sem nome de CN antes) = oração adverbial final, NÃO substantiva
+  // Só conta como marcador de subordinada substantiva se houver nome de CN antes
+  let mInfPrepSubst = null;
+  if(mInfPrep){
+    const fAntes = norm(frase.substring(0, frase.toLowerCase().indexOf(mInfPrep[0].toLowerCase())));
+    const temNomeCN = NOMES_CN_LISTA.some(n => fAntes.endsWith(n) || fAntes.includes(' '+n+' ') || fAntes.includes(' '+n));
+    const temVTI = VTI_LISTA.some(v => fAntes.endsWith(v) || fAntes.includes(' '+v+' ') || fAntes.includes(' '+v));
+    if(temNomeCN || temVTI) mInfPrepSubst = mInfPrep;
+  }
+
+  // Verificar se existe algum marcador de subordinada SUBSTANTIVA
   const temMarcador = temQue || temSe || temQuem || mPrepQue || mPrepSe ||
-                      mPrepQuem || mInfPrep || temOnde || temComo || temQuando;
+                      mPrepQuem || mInfPrepSubst || temOnde || temComo || temQuando;
 
   if(!temMarcador){
-    result.alerta = 'Não identifiquei marcadores de oração subordinada substantiva nesta frase. Use conectores como "que", "se", "quem", ou verbos no infinitivo após preposição (ex: "de fazer", "em saber").';
+    // Verificar se há outro tipo de subordinada para dar feedback pedagógico
+    let tipoOutro = '';
+    if(mInfPrep && mInfPrep[1]==='para') tipoOutro = 'adverbial final (exprime finalidade — responde "para quê?")';
+    else if(mInfPrep && mInfPrep[1]==='por') tipoOutro = 'adverbial causal (exprime causa — responde "por quê?")';
+    else if(mInfPrep) tipoOutro = 'adverbial';
+    else if(/\bquando\b/i.test(frase) && !/\bsaber quando|dizer quando|perguntar quando\b/i.test(frase)) tipoOutro = 'adverbial temporal (exprime tempo)';
+    else if(/\bembora|mesmo que|ainda que|apesar de\b/i.test(frase)) tipoOutro = 'adverbial concessiva';
+
+    if(tipoOutro){
+      result.alerta = `⚠️ Esta frase contém uma oração ${tipoOutro}, mas não uma oração subordinada SUBSTANTIVA.\n\nAs subordinadas substantivas exercem funções de: sujeito, objeto direto, objeto indireto, predicativo do sujeito, complemento nominal ou aposto.\n\nTente frases como: "Precisamos de que haja respeito." / "Sei que você consegue." / "É necessário que todos estudem."`;
+    } else {
+      result.alerta = 'Não identifiquei marcadores de oração subordinada substantiva nesta frase. Use conectores como "que", "se", "quem", "de que", ou verbos no infinitivo ligados a um nome (ex: "certeza de acertar", "medo de errar", "vontade de vencer").';
+    }
     return result;
   }
 
@@ -2095,6 +2167,7 @@ document.addEventListener('click', e=>{
 
 function fazerSair(){
   usuarioAtual = null;
+  limparSessao();
   acertos = 0;
   questoesRespondidas = new Set();
   lacunasRespondidas = new Set();
